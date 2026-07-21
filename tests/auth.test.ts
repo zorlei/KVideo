@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   createStoredAccount,
   hashPassword,
+  isBootstrapAdminCredential,
   parseBootstrapAccounts,
   resolveLoginMode,
   shouldUseSecureSessionCookie,
@@ -71,6 +72,13 @@ test('hashPassword and verifyPassword round-trip correctly', async () => {
   assert.ok(password.salt);
   assert.equal(await verifyPassword('secret-123', password.salt, password.hash), true);
   assert.equal(await verifyPassword('wrong-password', password.salt, password.hash), false);
+});
+
+test('bootstrap admin credential only accepts the configured admin password', () => {
+  assert.equal(isBootstrapAdminCredential('ADMIN', 'current-secret', 'current-secret'), true);
+  assert.equal(isBootstrapAdminCredential('admin', 'old-secret', 'current-secret'), false);
+  assert.equal(isBootstrapAdminCredential('viewer', 'current-secret', 'current-secret'), false);
+  assert.equal(isBootstrapAdminCredential('admin', '', ''), false);
 });
 
 test('signSessionPayload and verifySessionToken reject tampering', async () => {

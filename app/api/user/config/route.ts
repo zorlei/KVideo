@@ -5,7 +5,7 @@
  * so they persist across browsers, devices, and PWA installs.
  */
 
-import { Redis } from '@upstash/redis';
+import { Redis } from '@upstash/redis/cloudflare';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticationRequiredResponse } from '@/lib/server/api-responses';
 import { getServerSession } from '@/lib/server/auth';
