@@ -12,6 +12,7 @@ const RETRY_DELAY = 200;
 
 /**
  * Fetch with timeout support
+ * Accepts an optional external AbortSignal for cancellation cascade.
  */
 export async function fetchWithTimeout(
     url: string,
@@ -21,16 +22,29 @@ export async function fetchWithTimeout(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+    // If an external signal is provided, propagate its abort
+    const externalSignal = options.signal;
+    let onAbort: (() => void) | undefined;
+    if (externalSignal) {
+        if (externalSignal.aborted) {
+            controller.abort();
+        } else {
+            onAbort = () => controller.abort();
+            externalSignal.addEventListener('abort', onAbort, { once: true });
+        }
+    }
+
     try {
         const response = await fetch(url, {
             ...options,
             signal: controller.signal,
         });
-        clearTimeout(timeoutId);
         return response;
-    } catch (error) {
+    } finally {
         clearTimeout(timeoutId);
-        throw error;
+        if (externalSignal && onAbort) {
+            externalSignal.removeEventListener('abort', onAbort);
+        }
     }
 }
 
@@ -48,6 +62,10 @@ export async function withRetry<T>(
             return await fn();
         } catch (error) {
             lastError = error as Error;
+
+            if (lastError?.name === 'AbortError') {
+                throw lastError;
+            }
 
             if (i < retries) {
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (i + 1)));

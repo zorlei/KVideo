@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
+import { getLanAllowedDevOrigins } from "./lib/config/lan-access";
+
+const lanAllowedDevOrigins = getLanAllowedDevOrigins();
 
 const nextConfig: NextConfig = {
+  ...(lanAllowedDevOrigins.length > 0 ? { allowedDevOrigins: lanAllowedDevOrigins } : {}),
+
   // Performance optimizations
   reactStrictMode: true,
   poweredByHeader: false,

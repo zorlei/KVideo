@@ -1,19 +1,41 @@
 import { useState, useEffect } from 'react';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import type { Tag } from '../SortableTag';
 
 const DEFAULT_TAG = { id: 'popular', label: '热门', value: '热门' };
 
 const STORAGE_KEY_PREFIX = 'kvideo_custom_tags_';
 
+const ensureDefaultTag = (tags: Tag[]) => {
+    if (tags.some((tag) => tag.id === DEFAULT_TAG.id || tag.value === DEFAULT_TAG.value)) {
+        return tags.map((tag) =>
+            tag.id === DEFAULT_TAG.id || tag.value === DEFAULT_TAG.value
+                ? { ...DEFAULT_TAG, ...tag, id: DEFAULT_TAG.id, value: DEFAULT_TAG.value }
+                : tag
+        );
+    }
+
+    return [DEFAULT_TAG, ...tags];
+};
+
 export function useTagManager() {
-    const [contentType, setContentType] = useState<'movie' | 'tv'>('movie');
-    const [selectedTag, setSelectedTag] = useState(DEFAULT_TAG.value);
-    const [tags, setTags] = useState<any[]>([]);
+    const [contentType, setContentType] = useState<'movie' | 'tv'>(() => {
+        if (typeof window === 'undefined') return 'movie';
+        const saved = localStorage.getItem('kvideo_default_content_type');
+        return saved === 'tv' ? 'tv' : 'movie';
+    });
+    const [selectedTag, setSelectedTag] = useState(DEFAULT_TAG.id);
+    const [tags, setTags] = useState<Tag[]>([]);
     const [isLoadingTags, setIsLoadingTags] = useState(false);
     const [newTagInput, setNewTagInput] = useState('');
     const [showTagManager, setShowTagManager] = useState(false);
     const [justAddedTag, setJustAddedTag] = useState(false);
+
+    // Persist content type preference
+    useEffect(() => {
+        localStorage.setItem('kvideo_default_content_type', contentType);
+    }, [contentType]);
 
     const storageKey = `${STORAGE_KEY_PREFIX}${contentType}`;
 
@@ -23,7 +45,8 @@ export function useTagManager() {
             const saved = localStorage.getItem(storageKey);
             if (saved) {
                 try {
-                    setTags(JSON.parse(saved));
+                    const parsedTags = JSON.parse(saved);
+                    setTags(Array.isArray(parsedTags) ? ensureDefaultTag(parsedTags) : [DEFAULT_TAG]);
                     return;
                 } catch (e) {
                     console.error('Failed to parse saved tags', e);
@@ -42,12 +65,7 @@ export function useTagManager() {
                         value: label,
                     }));
 
-                    // If "热门" isn't in the list, add it to the front
-                    if (!mappedTags.some((t: any) => t.value === '热门')) {
-                        mappedTags.unshift(DEFAULT_TAG);
-                    }
-
-                    setTags(mappedTags);
+                    setTags(ensureDefaultTag(mappedTags));
                     // Also save to localStorage to avoid repeated fetches if desired
                     // Actually, let's just keep them in memory for now unless they customize
                 } else {
@@ -62,10 +80,10 @@ export function useTagManager() {
         };
 
         loadTags();
-        setSelectedTag(DEFAULT_TAG.value);
+        setSelectedTag(DEFAULT_TAG.id);
     }, [contentType, storageKey]);
 
-    const saveTags = (newTags: any[]) => {
+    const saveTags = (newTags: Tag[]) => {
         setTags(newTags);
         localStorage.setItem(storageKey, JSON.stringify(newTags));
     };
@@ -83,9 +101,11 @@ export function useTagManager() {
     };
 
     const handleDeleteTag = (tagId: string) => {
+        if (tagId === DEFAULT_TAG.id) return;
+
         saveTags(tags.filter(t => t.id !== tagId));
         if (selectedTag === tagId) {
-            setSelectedTag('popular');
+            setSelectedTag(DEFAULT_TAG.id);
         }
     };
 
@@ -102,19 +122,16 @@ export function useTagManager() {
                     label,
                     value: label,
                 }));
-                if (!mappedTags.some((t: any) => t.value === '热门')) {
-                    mappedTags.unshift(DEFAULT_TAG);
-                }
-                setTags(mappedTags);
+                setTags(ensureDefaultTag(mappedTags));
             } else {
                 setTags([DEFAULT_TAG]);
             }
-        } catch (error) {
+        } catch {
             setTags([DEFAULT_TAG]);
         } finally {
             setIsLoadingTags(false);
         }
-        setSelectedTag(DEFAULT_TAG.value);
+        setSelectedTag(DEFAULT_TAG.id);
         setShowTagManager(false);
     };
 

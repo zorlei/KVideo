@@ -51,7 +51,8 @@ export function SortableTag({
         >
             <div className={`${showTagManager && !isDragging ? 'animate-jiggle' : ''}`}>
                 <button
-                    onClick={() => !showTagManager && onTagSelect(tag.id)}
+                    type="button"
+                    onClick={() => onTagSelect(tag.id)}
                     className={`
             px-6 py-2.5 text-sm font-semibold transition-all whitespace-nowrap rounded-[var(--radius-full)] cursor-pointer select-none
             ${selectedTag === tag.id
@@ -64,6 +65,7 @@ export function SortableTag({
                 </button>
                 {showTagManager && (
                     <button
+                        type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             onTagDelete(tag.id);

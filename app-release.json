@@ -1,0 +1,164 @@
+{
+  "repository": {
+    "owner": "KuekHaoYang",
+    "name": "KVideo",
+    "branch": "main"
+  },
+  "currentVersion": "4.9.13",
+  "releases": [
+    {
+      "version": "4.9.13",
+      "publishedAt": "2026-07-13",
+      "title": "修复慢源搜索与延迟探测",
+      "notes": [
+        "慢视频源不再因 3 秒静默被前端提前判定为搜索完成，结果流会等待服务端明确结束。",
+        "实时延迟改用真实视频源地址并独立计算回退请求耗时，避免无效 URL 和累加计时造成虚高数值。",
+        "延迟探测限制为最多 4 路并发且轮次不重叠，搜索取消或超时后也不会继续无意义重试。",
+        "新增慢源搜索、延迟回退、探测并发和取消重试回归测试。"
+      ]
+    },
+    {
+      "version": "4.9.12",
+      "publishedAt": "2026-07-12",
+      "title": "恢复账户管理与退出登录入口",
+      "notes": [
+        "窄屏导航栏现在始终显示退出登录按钮，不再把整个用户操作区隐藏在桌面断点之后。",
+        "高级模式设置页现在复用统一账户管理组件，恢复账户信息、退出登录及超级管理员账户管理功能。",
+        "新增账户入口回归测试，覆盖窄屏导航栏和高级模式设置页。"
+      ]
+    },
+    {
+      "version": "4.9.11",
+      "publishedAt": "2026-07-09",
+      "title": "修复登录成功后回到登录页",
+      "notes": [
+        "访问密码 gate 登录成功后会直接放行当前页面，不再依赖整页刷新进入主界面，避免会话镜像时序导致重复登录。",
+        "服务端 session cookie 的 Secure 属性现在按实际请求协议和 x-forwarded-proto 判断，修复 Docker / HTTP 自托管生产模式下浏览器拒收 cookie 后刷新又回登录页的问题。",
+        "新增登录 gate 状态决策和 session cookie 协议判断回归测试。"
+      ]
+    },
+    {
+      "version": "4.9.10",
+      "publishedAt": "2026-07-09",
+      "title": "移除首页顶部快捷搜索区",
+      "notes": [
+        "首页不再显示内容分类、电影类型、年份三组硬编码快捷搜索按钮。",
+        "推荐页顶部直接进入内容类型切换与后端标签列表，减少标签区域上方的无关占用。",
+        "更新标签管理视图回归测试，防止首页重新引用 CategoryQuickSearch。"
+      ]
+    },
+    {
+      "version": "4.9.9",
+      "publishedAt": "2026-07-09",
+      "title": "修复管理标签入口误入搜索流程",
+      "notes": [
+        "首页管理标签模式现在会隐藏内容分类、电影类型、年份等快捷搜索项，避免用户打开标签管理时触发视频源搜索。",
+        "管理标签时不再显示电影/电视剧切换和推荐内容网格，完成、恢复默认、添加标签和标签列表成为当前视图主体。",
+        "标签 chip 在管理模式下改为可换行布局，并使用矩形拖拽排序策略，减少上方筛选内容对标签操作区的挤压。",
+        "新增标签管理视图回归测试，锁定管理入口不应退化为搜索结果筛选界面。"
+      ]
+    },
+    {
+      "version": "4.9.8",
+      "publishedAt": "2026-07-09",
+      "title": "修复登录后同步接口 400",
+      "notes": [
+        "自动同步组件现在只会在访问密码 gate 确认服务端会话并完成本地 session 镜像后挂载，避免登录跳转阶段提前请求 /api/user/config 与 /api/user/sync。",
+        "用户配置和云同步 API 在没有有效服务端 session 时改为返回 401 Authentication required，不再把未认证状态伪装成 Missing profileId 的 400。",
+        "新增未认证响应回归测试，防止受保护同步接口的状态码语义再次退化。"
+      ]
+    },
+    {
+      "version": "4.9.7",
+      "publishedAt": "2026-07-09",
+      "title": "修复旧 Android WebView 白屏",
+      "notes": [
+        "Next.js 构建后的浏览器静态 JS 现在会额外转译到 Chrome/WebView 83 目标，避免小米电视等旧 Android System WebView 因不支持 ??=、||=、&&= 而白屏。",
+        "Cloudflare Pages 构建链路同样会处理输出目录，确保托管站点和 Docker/Node 自托管站点使用一致的旧 WebView 兼容产物。",
+        "新增 WebView 83 静态资源回归测试，防止逻辑赋值语法重新漏进浏览器构建产物。"
+      ]
+    },
+    {
+      "version": "4.9.6",
+      "publishedAt": "2026-07-09",
+      "title": "修复移动端横屏弹幕缩放",
+      "notes": [
+        "弹幕画布现在优先使用未受 CSS transform 影响的布局尺寸，避免 iOS Safari 网页横屏时字体被拉伸或压缩。",
+        "横竖屏和 visualViewport 尺寸变化后会重新同步画布 backing store，并按新尺寸重排活跃弹幕。",
+        "新增弹幕画布尺寸工具测试，覆盖 transform 后 bounding box 横竖互换的回归场景。"
+      ]
+    },
+    {
+      "version": "4.9.5",
+      "publishedAt": "2026-07-09",
+      "title": "修复 Docker 登录页 Analytics 404",
+      "notes": [
+        "Vercel Analytics 现在只会在真实 Vercel 部署中注入，Docker、自托管和 Cloudflare Pages 不再请求 /_vercel/insights/script.js。",
+        "Cloudflare 部署环境判定优先于 Vercel 风格环境变量，避免适配器环境被误判为 Vercel。",
+        "新增部署环境单元测试，覆盖自托管、Vercel、Cloudflare 和混合环境变量场景。"
+      ]
+    },
+    {
+      "version": "4.9.4",
+      "publishedAt": "2026-07-08",
+      "title": "补充代理说明与局域网访问开关",
+      "notes": [
+        "设置页的代理播放区域显示内置 /api/proxy 端点和部署限制，明确该功能不是第三方 HTTP/SOCKS 代理服务器配置。",
+        "新增 ALLOW_LAN_ACCESS 环境变量：开启后 npm run dev / npm run start 会绑定 0.0.0.0，开发模式会放行常见内网 IPv4 来源。",
+        "新增 LAN_ALLOWED_DEV_ORIGINS，允许自定义 Next.js 开发模式的额外来源主机。",
+        "README 补充局域网访问和内置媒体代理说明，并同步修正 Docker hostname 注释。"
+      ]
+    },
+    {
+      "version": "4.9.3",
+      "publishedAt": "2026-04-15",
+      "title": "新增 Redis 托管账户模式",
+      "notes": [
+        "新增 Redis 托管账户模式：支持用户名密码登录、超级管理员账户 CRUD、权限编辑和密码重置。",
+        "认证改为服务端签名 HTTP-only 会话 Cookie，/api/user/config 与 /api/user/sync 不再信任客户端自报 profileId。",
+        "播放页线路列表补齐剩余问题：分辨率探测会按当前集数探测并缓存，打开线路列表时会自动定位当前线路，必要时自动展开隐藏项。",
+        "仓库补充了与新认证和线路列表逻辑对应的单元测试，并修正了本地 eslint 版本与 Next.js 规则链不兼容的问题。"
+      ]
+    },
+    {
+      "version": "4.9.2",
+      "publishedAt": "2026-04-12",
+      "title": "修复检查更新状态闪烁",
+      "notes": [
+        "设置页首次自动检查更新时不再让“检查更新”按钮自己持续转圈。",
+        "移除会反复闪烁的“正在整理结果”提示，避免用户误以为页面异常。",
+        "手动点击“检查更新”时才显示按钮转圈，状态反馈与用户操作保持一致。"
+      ]
+    },
+    {
+      "version": "4.9.1",
+      "publishedAt": "2026-04-12",
+      "title": "修复 Cloudflare Pages 构建失败",
+      "notes": [
+        "移除仅支持 Node.js 的 /api/site-icon 路由，避免 next-on-pages 因非 Edge 路由中止构建。",
+        "站点图标改为由服务端布局直接解析，导航栏和播放器页继续显示运行时配置的图标。",
+        "PWA manifest 回退为静态图标，确保 Cloudflare Pages、Docker 和本地构建链路一致可用。"
+      ]
+    },
+    {
+      "version": "4.9.0",
+      "publishedAt": "2026-04-12",
+      "title": "设置页新增版本信息与更新检查",
+      "notes": [
+        "设置页新增“版本与更新”卡片，直接显示当前版本、最近更新内容和检查结果。",
+        "新增手动“检查更新”按钮，会对比 GitHub main 分支上的最新版本元数据。",
+        "仓库新增更新日志文件，方便在项目内查看当前版本和更新说明。"
+      ]
+    },
+    {
+      "version": "4.8.3",
+      "publishedAt": "2026-04-12",
+      "title": "站点图标与播放器兼容性修复",
+      "notes": [
+        "站点图标改为支持运行时配置，Docker 镜像无需重新构建即可替换。",
+        "扩展播放器默认视口，减少桌面端播放器黑边。",
+        "修复 Android WebView 中 Cast SDK 判定以及全屏和画中画相关兼容性问题。"
+      ]
+    }
+  ]
+}

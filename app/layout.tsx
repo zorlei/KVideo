@@ -1,8 +1,11 @@
 import React from 'react';
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AutoSync } from '@/components/AutoSync'; // <-- 引入了自动同步组件
+import { SiteIconProvider } from '@/components/SiteIconProvider';
+import { TVProvider } from "@/lib/contexts/TVContext";
+import { TVNavigationInitializer } from "@/components/TVNavigationInitializer";
 import { Analytics } from "@vercel/analytics/react";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { PasswordGate } from "@/components/PasswordGate";
@@ -10,8 +13,17 @@ import { siteConfig } from "@/lib/config/site-config";
 import { AdKeywordsInjector } from "@/components/AdKeywordsInjector";
 import { BackToTop } from "@/components/ui/BackToTop";
 import { ScrollPositionManager } from "@/components/ScrollPositionManager";
+import { LocaleProvider } from "@/components/LocaleProvider";
+import { RuntimeFeaturesProvider } from "@/components/RuntimeFeaturesProvider";
+import { VideoTogetherController } from '@/components/VideoTogetherController';
+import { shouldEnableVercelAnalytics } from '@/lib/config/deployment';
+import { getRuntimeFeatures } from "@/lib/server/runtime-features";
+import { resolveSiteIconSrc } from '@/lib/server/site-icon';
 import fs from 'fs';
 import path from 'path';
+
+const DEFAULT_VIDEOTOGETHER_SCRIPT_URL =
+  'https://fastly.jsdelivr.net/gh/VideoTogether/VideoTogether@latest/release/extension.website.user.js';
 
 // Server Component specifically for reading env/file (async for best practices)
 async function AdKeywordsWrapper() {
@@ -52,45 +64,84 @@ async function AdKeywordsWrapper() {
   return <AdKeywordsInjector keywords={keywords} />;
 }
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const siteIconSrc = await resolveSiteIconSrc();
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  return {
+    title: siteConfig.title,
+    description: siteConfig.description,
+    icons: {
+      icon: siteIconSrc,
+    },
+  };
+}
 
-export const metadata: Metadata = {
-  title: siteConfig.title,
-  description: siteConfig.description,
-  icons: {
-    icon: '/icon.png',
-  },
-};
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const siteIconSrc = await resolveSiteIconSrc();
+  const runtimeFeatures = getRuntimeFeatures();
+  const videoTogetherScriptUrl =
+    process.env.VIDEOTOGETHER_SCRIPT_URL?.trim() || DEFAULT_VIDEOTOGETHER_SCRIPT_URL;
+  const videoTogetherSettingUrl = process.env.VIDEOTOGETHER_SETTING_URL?.trim();
+  const videoTogetherEnvEnabled = process.env.VIDEOTOGETHER_ENABLED !== 'false';
+  const vercelAnalyticsEnabled = shouldEnableVercelAnalytics();
+
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        {/* Apple PWA Support */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="KVideo" />
+        <link rel="apple-touch-icon" href={siteIconSrc} />
+        {/* Theme Color (for browser address bar) */}
+        <meta name="theme-color" content="#000000" />
+        {/* Mobile viewport */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
         suppressHydrationWarning
       >
-        <ThemeProvider>
-          <PasswordGate hasEnvPassword={!!process.env.ACCESS_PASSWORD}>
-            <AdKeywordsWrapper />
-            {children}
-            <BackToTop />
-            <ScrollPositionManager />
-          </PasswordGate>
-          <Analytics />
-          <ServiceWorkerRegister />
-        </ThemeProvider>
+        <SiteIconProvider iconSrc={siteIconSrc}>
+          <ThemeProvider>
+            <RuntimeFeaturesProvider initialFeatures={runtimeFeatures}>
+              <VideoTogetherController
+                envEnabled={videoTogetherEnvEnabled}
+                scriptUrl={videoTogetherScriptUrl}
+                settingUrl={videoTogetherSettingUrl}
+              />
+              <LocaleProvider />
+
+              <TVProvider>
+                <TVNavigationInitializer />
+                <PasswordGate hasAuth={!!(
+                  process.env.ADMIN_PASSWORD ||
+                  process.env.ACCOUNTS ||
+                  process.env.ACCESS_PASSWORD ||
+                  (
+                    process.env.AUTH_SECRET &&
+                    process.env.UPSTASH_REDIS_REST_URL &&
+                    process.env.UPSTASH_REDIS_REST_TOKEN
+                  )
+                )}>
+                  <AutoSync />
+                  <AdKeywordsWrapper />
+                  {children}
+                  <BackToTop />
+                  <ScrollPositionManager />
+                </PasswordGate>
+              </TVProvider>
+              {vercelAnalyticsEnabled ? <Analytics /> : null}
+              <ServiceWorkerRegister />
+            </RuntimeFeaturesProvider>
+          </ThemeProvider>
+        </SiteIconProvider>
 
         {/* ARIA Live Region for Screen Reader Announcements */}
         <div

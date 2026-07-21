@@ -2,6 +2,7 @@
 .spinner {
     width: 48px;
     height: 48px;
+    border: 5px solid rgba(128, 128, 128, 0.35);
     border: 5px solid color-mix(in srgb, var(--glass-bg) 50%, transparent);
     border-top-color: var(--accent-color);
     border-radius: var(--radius-full);
@@ -47,6 +48,22 @@
     overflow: visible;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: none;
+    /* Prevent page scrolling during drag */
+    -webkit-touch-callout: none;
+    /* Prevent iOS callout */
+}
+
+/* Increase touch target area for mobile */
+.slider-track::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    bottom: -5px;
+    /* Reduced from -16px to avoid covering buttons below */
+    z-index: 1;
 }
 
 .slider-track.h-1 {
@@ -59,6 +76,16 @@
     top: 0;
     height: 100%;
     background-color: var(--accent-color);
+    border-radius: var(--radius-full);
+    pointer-events: none;
+}
+
+.slider-buffer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.4);
     border-radius: var(--radius-full);
     pointer-events: none;
 }
@@ -399,4 +426,12 @@
     background: linear-gradient(90deg, var(--accent-color), #5ac8fa);
     border-radius: var(--radius-full);
     transition: width 0.1s linear;
+}
+
+/* Ensure control buttons are clickable above slider touch area */
+.btn-icon {
+    position: relative;
+    z-index: 50;
+    cursor: pointer;
+    touch-action: manipulation;
 }

@@ -15,11 +15,23 @@ export function parseEpisodes(playUrl: string): Episode[] {
         const episodes = playUrl.split('#').filter(Boolean);
 
         return episodes.map((episode, index) => {
-            const [name, url] = episode.split('$');
+            const parts = episode.split('$');
+            let name: string, url: string;
+
+            if (parts.length > 1) {
+                name = parts[0];
+                url = parts[1];
+            } else {
+                // If no '$' separator, treat the whole thing as the URL
+                url = parts[0];
+                name = `第 ${index + 1} 集`;
+            }
+
             // Clean up URL: remove double slashes but keep protocol (http:// or https://)
             const cleanUrl = (url || '').replace(/([^:])\/\//g, '$1/');
+
             return {
-                name: name || `Episode ${index + 1}`,
+                name: name || `第 ${index + 1} 集`,
                 url: cleanUrl,
                 index,
             };
@@ -29,3 +41,4 @@ export function parseEpisodes(playUrl: string): Episode[] {
         return [];
     }
 }
+

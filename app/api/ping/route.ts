@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { probeSourceLatency } from '@/lib/api/source-latency';
 
 export const runtime = 'edge';
 
@@ -18,53 +19,16 @@ export async function POST(request: NextRequest) {
 
         // Validate URL format
         try {
-            new URL(url);
+            const parsedUrl = new URL(url);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                return NextResponse.json({ error: 'Unsupported URL protocol' }, { status: 400 });
+            }
         } catch {
             return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
         }
 
-        const startTime = performance.now();
-
-        try {
-            // Use HEAD request for faster ping (less data transfer)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-            await fetch(url, {
-                method: 'HEAD',
-                signal: controller.signal,
-                mode: 'no-cors', // Allow cross-origin requests
-            });
-
-            clearTimeout(timeoutId);
-
-            const endTime = performance.now();
-            const latency = Math.round(endTime - startTime);
-
-            return NextResponse.json({ latency, success: true });
-        } catch (fetchError) {
-            // If HEAD fails, try GET with timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-            try {
-                await fetch(url, {
-                    method: 'GET',
-                    signal: controller.signal,
-                });
-                clearTimeout(timeoutId);
-
-                const endTime = performance.now();
-                const latency = Math.round(endTime - startTime);
-                return NextResponse.json({ latency, success: true });
-            } catch {
-                clearTimeout(timeoutId);
-                const endTime = performance.now();
-                const latency = Math.round(endTime - startTime);
-                // Still return latency even on error (timeout = slow)
-                return NextResponse.json({ latency, success: false, timeout: true });
-            }
-        }
+        const result = await probeSourceLatency(url);
+        return NextResponse.json(result);
     } catch (error) {
         console.error('Ping error:', error);
         return NextResponse.json(

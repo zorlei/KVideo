@@ -15,9 +15,17 @@ import {
     SortableContext,
     sortableKeyboardCoordinates,
     horizontalListSortingStrategy,
+    rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortableTag, Tag } from './SortableTag';
 import { useState, useRef, useEffect } from 'react';
+import { Icons } from '@/components/ui/Icon';
+
+interface RecommendTagConfig {
+    label: string;
+    isSelected: boolean;
+    onSelect: () => void;
+}
 
 interface TagListProps {
     tags: Tag[];
@@ -28,6 +36,7 @@ interface TagListProps {
     onTagDelete: (tagId: string) => void;
     onDragEnd: (event: DragEndEvent) => void;
     onJustAddedTagHandled: () => void;
+    recommendTag?: RecommendTagConfig;
 }
 
 export function TagList({
@@ -39,6 +48,7 @@ export function TagList({
     onTagDelete,
     onDragEnd,
     onJustAddedTagHandled,
+    recommendTag,
 }: TagListProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -106,11 +116,34 @@ export function TagList({
         >
             <div
                 ref={scrollContainerRef}
-                className="mb-8 flex items-center gap-3 overflow-x-auto pb-3 pt-2 px-1 scrollbar-hide"
+                className={`mb-8 flex items-center gap-3 pb-3 pt-2 px-1 scrollbar-hide ${
+                    showTagManager
+                        ? 'flex-wrap overflow-visible'
+                        : 'overflow-x-auto'
+                }`}
             >
+                {/* Recommendation Tag — non-draggable, rendered before sortable tags */}
+                {recommendTag && (
+                    <div className="relative flex-shrink-0">
+                        <button
+                            type="button"
+                            onClick={recommendTag.onSelect}
+                            className={`
+                                px-6 py-2.5 text-sm font-semibold transition-all whitespace-nowrap rounded-[var(--radius-full)] cursor-pointer select-none flex items-center gap-1.5
+                                ${recommendTag.isSelected
+                                    ? 'bg-[var(--accent-color)] text-white shadow-md scale-105'
+                                    : 'bg-[var(--glass-bg)] backdrop-blur-xl text-[var(--text-color)] border border-[var(--glass-border)] hover:border-[var(--accent-color)] hover:scale-105'
+                                }
+                            `}
+                        >
+                            <Icons.Sparkles size={14} />
+                            {recommendTag.label}
+                        </button>
+                    </div>
+                )}
                 <SortableContext
                     items={tags.map((t) => t.id)}
-                    strategy={horizontalListSortingStrategy}
+                    strategy={showTagManager ? rectSortingStrategy : horizontalListSortingStrategy}
                 >
                     {tags.map((tag) => (
                         <SortableTag

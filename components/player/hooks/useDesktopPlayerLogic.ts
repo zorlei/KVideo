@@ -10,6 +10,7 @@ import { useDesktopShortcuts } from './desktop/useDesktopShortcuts';
 import { useDesktopPlayerState } from './useDesktopPlayerState';
 import { getCopyUrl } from '../utils/urlUtils';
 import { useCastControls } from './desktop/useCastControls';
+import { DEFAULT_SEEK_STEP_SECONDS } from '@/lib/store/settings-store';
 
 type DesktopPlayerState = ReturnType<typeof useDesktopPlayerState>;
 
@@ -23,6 +24,8 @@ interface UseDesktopPlayerLogicProps {
     data: DesktopPlayerState['data'];
     actions: DesktopPlayerState['actions'];
     fullscreenType?: 'native' | 'window';
+    isForceLandscape?: boolean;
+    seekStepSeconds?: number;
 }
 
 export function useDesktopPlayerLogic({
@@ -34,7 +37,9 @@ export function useDesktopPlayerLogic({
     refs,
     data,
     actions,
-    fullscreenType = 'native'
+    fullscreenType = 'native',
+    isForceLandscape = false,
+    seekStepSeconds = DEFAULT_SEEK_STEP_SECONDS
 }: UseDesktopPlayerLogicProps) {
     const {
         videoRef, containerRef, progressBarRef, volumeBarRef,
@@ -45,13 +50,11 @@ export function useDesktopPlayerLogic({
 
     const {
         isPlaying,
-        currentTime,
         duration,
         volume,
         isMuted,
-        isFullscreen,
+        fullscreenMode,
         showControls,
-        isLoading,
         playbackRate,
         showSpeedMenu,
         isPiPSupported,
@@ -67,9 +70,11 @@ export function useDesktopPlayerLogic({
         setIsPlaying,
         setCurrentTime,
         setDuration,
+        setBufferedTime,
         setVolume,
         setIsMuted,
         setIsFullscreen,
+        setFullscreenMode,
         setShowControls,
         setIsLoading,
         setPlaybackRate,
@@ -92,8 +97,9 @@ export function useDesktopPlayerLogic({
 
     const playbackControls = usePlaybackControls({
         videoRef, isPlaying, setIsPlaying, setIsLoading,
-        initialTime, shouldAutoPlay, setDuration, setCurrentTime, onTimeUpdate, onError,
-        isDraggingProgressRef, speedMenuTimeoutRef, playbackRate, setPlaybackRate, setShowSpeedMenu
+        initialTime, shouldAutoPlay, setDuration, setBufferedTime, setCurrentTime, onTimeUpdate, onError,
+        isDraggingProgressRef, speedMenuTimeoutRef, playbackRate, setPlaybackRate, setShowSpeedMenu,
+        volume, isMuted
     });
 
     const volumeControls = useVolumeControls({
@@ -104,11 +110,12 @@ export function useDesktopPlayerLogic({
 
     const progressControls = useProgressControls({
         videoRef, progressBarRef, duration,
-        setCurrentTime, isDraggingProgressRef
+        setCurrentTime, isDraggingProgressRef,
+        isRotated: isForceLandscape
     });
 
     const skipControls = useSkipControls({
-        videoRef, duration, setCurrentTime,
+        videoRef, duration, seekStepSeconds, setCurrentTime,
         showSkipForwardIndicator, showSkipBackwardIndicator,
         skipForwardAmount, skipBackwardAmount,
         setShowSkipForwardIndicator, setShowSkipBackwardIndicator,
@@ -118,7 +125,7 @@ export function useDesktopPlayerLogic({
     });
 
     const fullscreenControls = useFullscreenControls({
-        containerRef, videoRef, isFullscreen, setIsFullscreen,
+        containerRef, videoRef, setIsFullscreen, fullscreenMode, setFullscreenMode,
         isPiPSupported, isAirPlaySupported, setIsPiPSupported, setIsAirPlaySupported,
         fullscreenType
     });
@@ -142,6 +149,7 @@ export function useDesktopPlayerLogic({
         togglePlay: playbackControls.togglePlay,
         toggleMute: volumeControls.toggleMute,
         toggleFullscreen: fullscreenControls.toggleFullscreen,
+        toggleWindowFullscreen: fullscreenControls.toggleWindowFullscreen,
         togglePictureInPicture: fullscreenControls.togglePictureInPicture,
         skipForward: skipControls.skipForward,
         skipBackward: skipControls.skipBackward,
@@ -151,11 +159,13 @@ export function useDesktopPlayerLogic({
 
     return useMemo(() => ({
         handleMouseMove: controlsVisibility.handleMouseMove,
+        handleTouchToggleControls: controlsVisibility.handleTouchToggleControls,
         togglePlay: playbackControls.togglePlay,
         handlePlay: playbackControls.handlePlay,
         handlePause: playbackControls.handlePause,
         handleTimeUpdateEvent: playbackControls.handleTimeUpdateEvent,
         handleLoadedMetadata: playbackControls.handleLoadedMetadata,
+        handleProgressEvent: playbackControls.handleProgressEvent,
         handleVideoError: playbackControls.handleVideoError,
         handleProgressClick: progressControls.handleProgressClick,
         handleProgressMouseDown: progressControls.handleProgressMouseDown,
@@ -165,6 +175,8 @@ export function useDesktopPlayerLogic({
         handleVolumeChange: volumeControls.handleVolumeChange,
         handleVolumeMouseDown: volumeControls.handleVolumeMouseDown,
         toggleFullscreen: fullscreenControls.toggleFullscreen,
+        toggleNativeFullscreen: fullscreenControls.toggleNativeFullscreen,
+        toggleWindowFullscreen: fullscreenControls.toggleWindowFullscreen,
         togglePictureInPicture: fullscreenControls.togglePictureInPicture,
         showAirPlayMenu: fullscreenControls.showAirPlayMenu,
         showCastMenu: castControls.showCastMenu,
