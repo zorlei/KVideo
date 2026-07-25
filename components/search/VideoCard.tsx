@@ -78,16 +78,26 @@ export const VideoCard = memo<VideoCardProps>(({
                                 referrerPolicy="no-referrer"
                                 onError={(e) => {
                                     const target = e.currentTarget as HTMLImageElement;
-                                    target.style.opacity = '0';
+                                    if (target.dataset.fallback === '1') {
+                                        target.style.opacity = '0';
+                                        return;
+                                    }
+                                    target.dataset.fallback = '1';
+                                    target.src = '/placeholder-poster.svg';
                                 }}
                             />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                                <Icons.Film size={64} className="text-[var(--text-color-secondary)]" />
-                            </div>
+                            <Image
+                                src="/placeholder-poster.svg"
+                                alt={video.vod_name}
+                                fill
+                                className="object-cover rounded-[var(--radius-2xl)]"
+                                sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 16vw"
+                                unoptimized
+                            />
                         )}
 
-                        {/* Fallback Icon - visible when image fails */}
+                        {/* Fallback Icon - visible when image fails completely */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center -z-10 gap-2">
                             <Icons.Film size={48} className="text-[var(--text-color-secondary)] opacity-40" />
                             <span className="text-xs text-[var(--text-color-secondary)] opacity-60 px-2 text-center line-clamp-2">{video.vod_name}</span>

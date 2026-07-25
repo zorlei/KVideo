@@ -3,7 +3,13 @@
  * Utility functions for M3U8 playlist manipulation
  */
 
-import { parseBlocks, learnMainPattern, scoreBlock, shouldFilterBlock } from './m3u8-ad-detector';
+import {
+    parseBlocks,
+    learnMainPattern,
+    scoreBlock,
+    shouldFilterBlock,
+    findDuplicateSignatureBlockIndices,
+} from './m3u8-ad-detector';
 
 const INTERSTITIAL_DATERANGE_MARKERS = [
     'class="com.apple.hls.interstitial"',
@@ -67,7 +73,7 @@ function isAuxiliaryAdMetadataLine(trimmedLine: string, normalizedKeywords: stri
  * 1. Keyword matching (configurable via env)
  * 2. CUE-OUT/CUE-IN standard tags
  * 3. HLS interstitial metadata removal
- * 4. Heuristic block analysis (filename patterns, ad path keywords)
+ * 4. Heuristic block analysis (filename patterns, ad path keywords, duration signature fingerprints)
  * 
  * Also converts relative URLs to absolute URLs for Blob playback.
  * 
@@ -113,9 +119,13 @@ export function filterM3u8Ad(content: string, baseUrl: string, mode: AdFilterMod
         const blocks = parseBlocks(lines);
         if (blocks.length > 0) {
             const mainPattern = learnMainPattern(blocks);
-            for (const block of blocks) {
+            const duplicateIndices = findDuplicateSignatureBlockIndices(blocks);
+
+            for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
+                const block = blocks[blockIdx];
+                const isDuplicate = duplicateIndices.has(blockIdx);
                 // Pass all keywords (including custom ones) to heuristic scorer
-                const score = scoreBlock(block, mainPattern, normalizedKeywords);
+                const score = scoreBlock(block, mainPattern, normalizedKeywords, isDuplicate);
                 const threshold = mode === 'aggressive' ? 3.0 : 5.0;
 
                 if (shouldFilterBlock(score, threshold)) {
@@ -125,8 +135,8 @@ export function filterM3u8Ad(content: string, baseUrl: string, mode: AdFilterMod
                         adLineIndices.add(segment.lineIndex - 1); // EXTINF line
                     }
                 } else if (block.segments.length > 0) {
-                    // Segment-level detection: 
-                    // Even if the whole block didn't trigger, check segments individually 
+                    // Segment-level detection:
+                    // Even if the whole block didn't trigger, check segments individually
                     // if it's a suspicious single-segment "block" (common for ads without discontinuity)
                     for (const segment of block.segments) {
                         const singleSegmentBlock = {

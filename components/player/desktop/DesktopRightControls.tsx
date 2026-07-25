@@ -79,7 +79,9 @@ export function DesktopRightControls({
                 aria-label={isWebFullscreen ? '退出网页全屏' : '网页全屏'}
                 title={isWebFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)'}
             >
-                <Icons.Target size={20} className={isWebFullscreen ? 'text-[var(--accent-color)]' : ''} />
+                {isWebFullscreen
+                    ? <Icons.WebFullscreenExit size={20} className="text-[var(--accent-color)]" />
+                    : <Icons.WebFullscreen size={20} />}
             </button>
 
             {/* Native Fullscreen */}

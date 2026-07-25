@@ -4,8 +4,20 @@
     "name": "KVideo",
     "branch": "main"
   },
-  "currentVersion": "4.9.13",
+  "currentVersion": "4.9.15",
   "releases": [
+    {
+      "version": "4.9.15",
+      "publishedAt": "2026-07-25",
+      "title": "播放页体验与 Android TV 9 兼容",
+      "notes": [
+        "修复点击选集排序导致播放器闪烁重播：非播放器核心设置变化不再重建 HLS。",
+        "播放页布局对齐、网页全屏图标更新；选集支持网格+分段翻页；封面缺失显示占位图。",
+        "广告检测新增分片时长指纹去重（PR #219），并保留原有 interstitial/代理/关键词过滤。",
+        "客户端静态资源转译目标降至 chrome69，修复 Android TV 9 旧 WebView 白屏。",
+        "同步补齐广告检测、设置快照与 WebView 回归测试。"
+      ]
+    },
     {
       "version": "4.9.13",
       "publishedAt": "2026-07-13",

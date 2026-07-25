@@ -24,13 +24,31 @@ export function VideoMetadata({ videoData, source, title }: VideoMetadataProps) 
   return (
     <Card hover={false}>
       <div className="flex flex-col sm:flex-row items-start gap-4">
-        {videoData?.vod_pic && (
-          <img
-            src={videoData.vod_pic}
-            alt={videoData.vod_name}
-            className="w-24 h-36 sm:w-32 sm:h-48 object-cover rounded-[var(--radius-2xl)] border border-[var(--glass-border)]"
-          />
-        )}
+        <div className="w-24 h-36 sm:w-32 sm:h-48 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] overflow-hidden bg-[color-mix(in_srgb,var(--glass-bg)_50%,transparent)] flex-shrink-0">
+          {videoData?.vod_pic ? (
+            <img
+              src={videoData.vod_pic}
+              alt={videoData.vod_name || title || ''}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (target.dataset.fallback === '1') {
+                  target.style.display = 'none';
+                  return;
+                }
+                target.dataset.fallback = '1';
+                target.src = '/placeholder-poster.svg';
+              }}
+            />
+          ) : (
+            <img
+              src="/placeholder-poster.svg"
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
         <div className="flex-1">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--text-color)] mb-3">
             {videoData?.vod_name || title}
