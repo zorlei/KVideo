@@ -83,8 +83,14 @@ function isAuxiliaryAdMetadataLine(trimmedLine: string, normalizedKeywords: stri
  */
 export type AdFilterMode = 'off' | 'keyword' | 'heuristic' | 'aggressive';
 
-export function filterM3u8Ad(content: string, baseUrl: string, mode: AdFilterMode = 'heuristic', customKeywords: string[] = []): string {
+export function filterM3u8Ad(
+    content: string,
+    baseUrl: string,
+    mode: AdFilterMode = 'heuristic',
+    customKeywords: string[] = []
+): string {
     if (!content) return '';
+    if (mode === 'off') return content;
 
     // Use keywords passed from AdKeywordsWrapper (already loaded from env/file)
     const normalizedKeywords = normalizeKeywords(customKeywords);
@@ -97,22 +103,22 @@ export function filterM3u8Ad(content: string, baseUrl: string, mode: AdFilterMod
             if (urlMatch && urlMatch[1]) {
                 effectiveBaseUrl = decodeURIComponent(urlMatch[1]);
             }
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
     }
 
     const basePath = effectiveBaseUrl.substring(0, effectiveBaseUrl.lastIndexOf('/') + 1);
     let origin = '';
     try {
         origin = new URL(effectiveBaseUrl).origin;
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
 
     // 2. Global Scan: Check if any ad keywords exist in the content
-    const hasKeywordMatchInPlaylist = mode !== 'off' && hasKeywordMatch(content, normalizedKeywords);
-    const hasCueTag = mode !== 'off' && (content.includes('#EXT-X-CUE-OUT') || content.includes('#EXT-X-CUE-IN'));
+    const hasKeywordMatchInPlaylist = hasKeywordMatch(content, normalizedKeywords);
+    const hasCueTag = content.includes('#EXT-X-CUE-OUT') || content.includes('#EXT-X-CUE-IN');
 
     // 3. Heuristic Analysis: If no explicit ad signals, use block-based detection
     const lines = content.split(/\r?\n/);
-    let adLineIndices = new Set<number>();
+    const adLineIndices = new Set<number>();
 
     if (!hasCueTag && (mode === 'heuristic' || mode === 'aggressive')) {
         // No obvious ad signals - run heuristic analysis
@@ -174,16 +180,15 @@ export function filterM3u8Ad(content: string, baseUrl: string, mode: AdFilterMod
 
         // 4. Strip modern HLS interstitial metadata before the player can schedule it.
         if (
-            mode !== 'off' &&
-            (isInterstitialDateRange(trimmedLine, normalizedKeywords) ||
-                isAuxiliaryAdMetadataLine(trimmedLine, normalizedKeywords))
+            isInterstitialDateRange(trimmedLine, normalizedKeywords) ||
+            isAuxiliaryAdMetadataLine(trimmedLine, normalizedKeywords)
         ) {
             continue;
         }
 
         // 5. CUE Tag Detection (SCTE-35 Standard)
         // EXT-X-CUE-OUT marks start of ad, EXT-X-CUE-IN marks end
-        if (mode !== 'off' && trimmedLine.startsWith('#EXT-X-CUE-OUT')) {
+        if (trimmedLine.startsWith('#EXT-X-CUE-OUT')) {
             insideCueAdBlock = true;
             // Remove preceding DISCONTINUITY if present
             if (processedLines.length > 0 && processedLines[processedLines.length - 1].trim() === '#EXT-X-DISCONTINUITY') {
