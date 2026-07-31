@@ -4,8 +4,30 @@
     "name": "KVideo",
     "branch": "main"
   },
-  "currentVersion": "4.9.18",
+  "currentVersion": "4.9.20",
   "releases": [
+    {
+      "version": "4.9.20",
+      "publishedAt": "2026-07-31",
+      "title": "新增严格全链路验证套件",
+      "notes": [
+        "新增独立 verification 目录与一键运行命令，覆盖源码结构、复杂度、依赖、安全、构建、Docker、API、代理、性能、PWA 与发布一致性检查。",
+        "新增四视口页面渲染、Axe 可访问性、递归 UI 状态与控件交互验证，并记录每次动作的恢复步骤、匹配依据、异常、截图和 Playwright trace。",
+        "新增确定性 MP4/HLS 播放、分辨率、掉帧与 200ms 卡顿检测，以及本地和 Cloudflare 的像素差异报告。",
+        "验证结果同时输出 HTML、Markdown、JSON、JUnit、NDJSON 和原始命令日志；验证器自有文件全部限制在 150 行以内，且不会修改业务源码。"
+      ]
+    },
+    {
+      "version": "4.9.19",
+      "publishedAt": "2026-07-31",
+      "title": "修复自托管同步与豆瓣海报回退",
+      "notes": [
+        "修复 Docker / Node 自托管下用户同步与配置接口无法从 process.env 读取 Upstash 凭据、持续返回 500 的问题（#226 / PR #227）。",
+        "云端恢复与列表渲染会丢弃缺少 videoId、source、title 或有效 episodeIndex 的损坏记录，避免账户首页被永久崩溃数据锁死（#228 / PR #229）。",
+        "豆瓣图片代理会在 imgN.doubanio.com 线路不可达时按镜像回退，并保留上游最终状态码，修复境外部署海报批量 500（PR #230）。",
+        "新增同步记录与豆瓣镜像回退回归测试，并通过真实 Next.js standalone + Upstash REST 兼容环境的登录、同步和配置读写验证。"
+      ]
+    },
     {
       "version": "4.9.18",
       "publishedAt": "2026-07-29",
