@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parse } from '@typescript-eslint/typescript-estree';
 import { finding } from '../core/finding.mjs';
 import { relative, walk, writeJson } from '../core/files.mjs';
+import { children } from './ast-walk.mjs';
 
 const textExt = new Set(['.ts', '.tsx', '.js', '.mjs', '.json', '.yml', '.yaml', '.toml', '.md']);
 const patterns = [
@@ -10,6 +12,25 @@ const patterns = [
   ['aws-access-key', /\bAKIA[0-9A-Z]{16}\b/],
   ['generic-secret-assignment', /(?:secret|token|password|api[_-]?key)\s*[:=]\s*['"][^'"\n]{12,}['"]/i],
 ];
+
+export function findDangerousConstructs(file, text) {
+  const ast = parse(text, {
+    jsx: file.endsWith('.tsx') || file.endsWith('.jsx'),
+    errorOnUnknownASTType: false,
+  });
+  const constructs = new Set();
+  const visit = (node) => {
+    if (node.type === 'JSXAttribute' && node.name?.name === 'dangerouslySetInnerHTML') {
+      constructs.add('dangerouslySetInnerHTML');
+    }
+    if (node.type === 'CallExpression' && node.callee?.type === 'Identifier' && node.callee.name === 'eval') {
+      constructs.add('eval');
+    }
+    for (const child of children(node)) visit(child);
+  };
+  visit(ast);
+  return [...constructs].map((construct) => ({ file, construct }));
+}
 
 export async function checkSecurityScan(ctx) {
   const files = walk(ctx.config.root, (file) => textExt.has(path.extname(file)) && !file.includes('/verification/artifacts/'));
@@ -30,11 +51,7 @@ export async function checkSecurityScan(ctx) {
     evidence: [target], remediation: 'Remove and rotate confirmed credentials; replace false positives with safe fixtures.',
   });
   const dangerous = files.filter((file) => ['.ts', '.tsx', '.js', '.mjs'].includes(path.extname(file))).flatMap((file) => {
-    const text = fs.readFileSync(file, 'utf8');
-    return [
-      ...(text.includes('dangerouslySetInnerHTML') ? [{ file: relative(ctx.config.root, file), construct: 'dangerouslySetInnerHTML' }] : []),
-      ...(text.match(/\beval\s*\(/) ? [{ file: relative(ctx.config.root, file), construct: 'eval' }] : []),
-    ];
+    return findDangerousConstructs(relative(ctx.config.root, file), fs.readFileSync(file, 'utf8'));
   });
   finding(ctx, {
     id: 'security.dangerous-constructs', category: 'security', title: 'Dangerous runtime constructs are inventoried',

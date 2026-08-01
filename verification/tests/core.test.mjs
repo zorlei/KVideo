@@ -3,6 +3,7 @@ import test from 'node:test';
 import { numericCandidate, prepareActionState } from '../src/browser/action-state.mjs';
 import { getConfig } from '../src/config.mjs';
 import { latestDeployment } from '../src/checks/deployment.mjs';
+import { findDangerousConstructs } from '../src/checks/security-scan.mjs';
 import { redact, redactText } from '../src/core/redact.mjs';
 import { escapeXml } from '../src/core/xml.mjs';
 
@@ -50,4 +51,14 @@ test('selects the newest Cloudflare production deployment', () => {
   ]);
   assert.equal(latestDeployment(output)?.Source, 'abcdef1');
   assert.equal(latestDeployment('not json'), null);
+});
+
+test('dangerous construct scan ignores matcher text and finds runtime use', () => {
+  const scanner = "const name = 'dangerouslySetInnerHTML'; const matcher = /eval\\s*\\(/;";
+  assert.deepEqual(findDangerousConstructs('scanner.mjs', scanner), []);
+  const runtime = "export const View = () => <div dangerouslySetInnerHTML={{ __html: 'x' }} />; eval('x');";
+  assert.deepEqual(findDangerousConstructs('view.tsx', runtime), [
+    { file: 'view.tsx', construct: 'dangerouslySetInnerHTML' },
+    { file: 'view.tsx', construct: 'eval' },
+  ]);
 });
